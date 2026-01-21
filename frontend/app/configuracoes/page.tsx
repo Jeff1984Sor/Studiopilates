@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -31,6 +32,7 @@ type Subcategoria = { id: number; descricao: string; categoria_id: number };
 type MenuKey =
   | "unidades"
   | "termos"
+  | "modelo_contrato"
   | "perfis"
   | "recorrencias"
   | "tipo_plano"
@@ -42,6 +44,7 @@ type MenuKey =
 const menu: { key: MenuKey; label: string; group: string }[] = [
   { key: "unidades", label: "Unidades", group: "Configuracoes" },
   { key: "termos", label: "Termos de uso", group: "Configuracoes" },
+  { key: "modelo_contrato", label: "Modelo de contratos", group: "Configuracoes" },
   { key: "perfis", label: "Perfis de acesso", group: "Configuracoes" },
   { key: "recorrencias", label: "Recorrencias", group: "Planos" },
   { key: "tipo_plano", label: "Tipos de plano", group: "Planos" },
@@ -701,6 +704,23 @@ export default function Page() {
                       <p className="text-gray-500 line-clamp-2">{t.descricao}</p>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {active === "modelo_contrato" && (
+              <div className="rounded-2xl bg-white/70 p-6">
+                <h2 className="text-2xl font-display">Modelo de contratos</h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  Crie modelos completos com variaveis, edite e busque entre os modelos ja criados.
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href="/contratos/modelos"
+                    className="inline-flex items-center rounded-full bg-black px-4 py-2 text-white"
+                  >
+                    Abrir modelos de contrato
+                  </Link>
                 </div>
               </div>
             )}
