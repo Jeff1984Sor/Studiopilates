@@ -6,6 +6,7 @@ const links = [
   { href: "/profissionais", label: "Profissionais" },
   { href: "/planos", label: "Planos" },
   { href: "/contratos", label: "Contratos" },
+  { href: "/contratos/modelos", label: "Modelo de Contrato" },
   { href: "/agenda", label: "Agenda" },
   { href: "/financeiro", label: "Financeiro" },
   { href: "/configuracoes", label: "Configuracoes" }

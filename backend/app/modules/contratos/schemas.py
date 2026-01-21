@@ -26,3 +26,22 @@ class ContratoOut(ORMModel):
     fim: date | None
     status: str
     observacoes: str | None
+
+
+class ContratoModeloCreate(BaseModel):
+    titulo: str
+    descricao: str
+    ativo: bool = True
+
+
+class ContratoModeloUpdate(BaseModel):
+    titulo: str | None = None
+    descricao: str | None = None
+    ativo: bool | None = None
+
+
+class ContratoModeloOut(ORMModel):
+    id: int
+    titulo: str
+    descricao: str
+    ativo: bool
