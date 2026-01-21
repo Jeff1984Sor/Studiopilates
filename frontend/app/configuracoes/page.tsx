@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -8,6 +8,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
+import Mention from "@tiptap/extension-mention";
 import AppShell from "@/components/layout/AppShell";
 import api from "@/lib/api";
 
@@ -63,7 +64,8 @@ export default function Page() {
   const [fornecedorForm, setFornecedorForm] = useState({ nome: "", documento: "", whatsapp: "" });
   const [categoriaForm, setCategoriaForm] = useState({ descricao: "" });
   const [subcategoriaForm, setSubcategoriaForm] = useState({ descricao: "", categoria_id: "" });
-  const [variavelDraft, setVariavelDraft] = useState("");
+  const [showPreview, setShowPreview] = useState(true);
+  const variaveisRef = useRef<TermoVariavel[]>([]);
 
   const editor = useEditor({
     extensions: [
@@ -71,7 +73,115 @@ export default function Page() {
       Underline,
       Link.configure({ openOnClick: false }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Image
+      Image,
+      Mention.configure({
+        HTMLAttributes: {
+          class:
+            "rounded-md bg-black/5 px-1.5 py-0.5 text-[11px] font-medium text-gray-700"
+        },
+        suggestion: {
+          char: "#",
+          items: ({ query }) => {
+            const term = query.toLowerCase();
+            return variaveisRef.current
+              .filter(
+                (item) =>
+                  item.label.toLowerCase().includes(term) || item.key.toLowerCase().includes(term)
+              )
+              .slice(0, 8);
+          },
+          render: () => {
+            let popup: HTMLDivElement | null = null;
+            let listEl: HTMLDivElement | null = null;
+            let items: TermoVariavel[] = [];
+            let selectedIndex = 0;
+            let command: ((item: { id: string; label: string }) => void) | null = null;
+
+            const update = () => {
+              if (!listEl) return;
+              listEl.innerHTML = "";
+              items.forEach((item, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                  "flex w-full items-start gap-2 rounded-lg px-2 py-1 text-left text-xs hover:bg-black/5";
+                if (index === selectedIndex) {
+                  button.className += " bg-black/10";
+                }
+                button.innerHTML = `<span class="font-medium">${item.label}</span><span class="text-gray-500">#${item.key}</span>`;
+                button.addEventListener("click", () => {
+                  command?.({ id: item.key, label: item.label });
+                });
+                listEl?.appendChild(button);
+              });
+            };
+
+            const position = (rect: DOMRect | null) => {
+              if (!popup || !rect) return;
+              popup.style.left = `${rect.left}px`;
+              popup.style.top = `${rect.bottom + 8}px`;
+            };
+
+            return {
+              onStart: (props) => {
+                items = props.items as TermoVariavel[];
+                command = props.command;
+                selectedIndex = 0;
+                popup = document.createElement("div");
+                popup.className =
+                  "z-50 rounded-xl border border-black/10 bg-white/95 p-2 shadow-xl backdrop-blur";
+                listEl = document.createElement("div");
+                listEl.className = "flex flex-col gap-1";
+                popup.appendChild(listEl);
+                document.body.appendChild(popup);
+                update();
+                position(props.clientRect?.() ?? null);
+              },
+              onUpdate: (props) => {
+                items = props.items as TermoVariavel[];
+                command = props.command;
+                selectedIndex = 0;
+                update();
+                position(props.clientRect?.() ?? null);
+              },
+              onKeyDown: (props) => {
+                if (props.event.key === "ArrowDown") {
+                  selectedIndex = (selectedIndex + 1) % items.length;
+                  update();
+                  return true;
+                }
+                if (props.event.key === "ArrowUp") {
+                  selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                  update();
+                  return true;
+                }
+                if (props.event.key === "Enter") {
+                  const item = items[selectedIndex];
+                  if (item) {
+                    command?.({ id: item.key, label: item.label });
+                  }
+                  return true;
+                }
+                return false;
+              },
+              onExit: () => {
+                popup?.remove();
+                popup = null;
+              }
+            };
+          }
+        },
+        renderLabel({ node }) {
+          return `{{${node.attrs.id}}}`;
+        },
+        renderHTML({ node, HTMLAttributes }) {
+          return [
+            "span",
+            { ...HTMLAttributes, "data-mention": node.attrs.id },
+            `{{${node.attrs.id}}}`
+          ];
+        }
+      })
     ],
     content: termoForm.descricao || "",
     immediatelyRender: false,
@@ -296,23 +406,16 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
+    variaveisRef.current = termoVariaveisQuery.data ?? [];
+  }, [termoVariaveisQuery.data]);
+
+  useEffect(() => {
     if (!editor) return;
     const current = editor.getHTML();
     if ((termoForm.descricao || "") !== current) {
       editor.commands.setContent(termoForm.descricao || "", false);
     }
   }, [editor, termoForm.descricao]);
-
-  const insertVariable = (key: string) => {
-    if (!editor) return;
-    editor.chain().focus().insertContent(`{{${key}}}`).run();
-  };
-
-  const insertDraft = () => {
-    if (!editor || !variavelDraft.trim()) return;
-    editor.chain().focus().insertContent(variavelDraft).run();
-    setVariavelDraft("");
-  };
 
   const insertImage = () => {
     if (!editor) return;
@@ -425,7 +528,7 @@ export default function Page() {
                     Use variaveis como {"{{aluno.nome}}"} ou {"{{plano.descricao}}"}.
                   </p>
                 </div>
-                <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_280px]">
+                <div className="mt-4 space-y-4">
                   <div className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input
@@ -522,10 +625,20 @@ export default function Page() {
                         Direita
                       </button>
                     </div>
-                    <div className="min-h-[420px] rounded-2xl border border-black/10 bg-white/80 p-3">
+                    <div className="rounded-2xl border border-black/10 bg-white/80 p-3">
+                      <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
+                        <span>Digite # e selecione a variavel do sistema.</span>
+                        <button
+                          className="rounded-full bg-white/70 px-3 py-1 text-[11px]"
+                          onClick={() => setShowPreview((v) => !v)}
+                          type="button"
+                        >
+                          {showPreview ? "Ocultar preview" : "Mostrar preview"}
+                        </button>
+                      </div>
                       <EditorContent
                         editor={editor}
-                        className="min-h-[380px] outline-none text-sm"
+                        className="min-h-[420px] outline-none text-sm"
                       />
                     </div>
                     <button
@@ -536,55 +649,17 @@ export default function Page() {
                       {createTermo.isPending ? "Salvando..." : "Adicionar termo"}
                     </button>
                   </div>
-                  <div className="rounded-2xl bg-white/70 p-4">
-                    <p className="text-xs uppercase tracking-widest text-gray-400">Preview</p>
-                    <div
-                      className="prose prose-sm mt-3 max-w-none rounded-xl bg-white/80 p-4"
-                      dangerouslySetInnerHTML={{ __html: termoForm.descricao || "<p>Sem conteudo.</p>" }}
-                    />
-                  </div>
-                  <div className="rounded-2xl bg-white/70 p-4">
-                    <p className="text-xs uppercase tracking-widest text-gray-400">Variaveis</p>
-                    <div className="mt-3 rounded-xl bg-white/80 p-3">
-                      <p className="text-[11px] uppercase tracking-widest text-gray-400">Bloco livre</p>
-                      <textarea
-                        className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 bg-white/80 p-2 text-xs"
-                        placeholder="Escreva qualquer coisa aqui e insira no termo quando quiser."
-                        value={variavelDraft}
-                        onChange={(e) => setVariavelDraft(e.target.value)}
+                  {showPreview && (
+                    <div className="rounded-2xl bg-white/70 p-4">
+                      <p className="text-xs uppercase tracking-widest text-gray-400">Preview</p>
+                      <div
+                        className="prose prose-sm mt-3 max-w-none rounded-xl bg-white/80 p-4"
+                        dangerouslySetInnerHTML={{
+                          __html: termoForm.descricao || "<p>Sem conteudo.</p>"
+                        }}
                       />
-                      <button
-                        className="mt-2 rounded-full bg-white/70 px-3 py-1 text-[10px]"
-                        onClick={insertDraft}
-                        type="button"
-                        disabled={!variavelDraft.trim()}
-                      >
-                        Inserir bloco no termo
-                      </button>
                     </div>
-                    <div className="mt-2 space-y-2 text-xs">
-                      {(termoVariaveisQuery.data ?? []).map((v) => (
-                        <div key={v.key} className="rounded-xl bg-white/80 p-2">
-                          <p className="font-medium">{v.label}</p>
-                          <p className="text-gray-500">
-                            {"{{"}
-                            {v.key}
-                            {"}}"} • ex: {v.example}
-                          </p>
-                          <button
-                            className="mt-2 rounded-full bg-white/70 px-3 py-1 text-[10px]"
-                            onClick={() => insertVariable(v.key)}
-                            type="button"
-                          >
-                            Inserir variavel
-                          </button>
-                        </div>
-                      ))}
-                      {(termoVariaveisQuery.data ?? []).length === 0 && (
-                        <p className="text-gray-500">Nenhuma variavel encontrada.</p>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
                 <div className="mt-6 space-y-2 text-sm">
                   {(termosQuery.data ?? []).map((t) => (
