@@ -63,6 +63,7 @@ export default function Page() {
   const [fornecedorForm, setFornecedorForm] = useState({ nome: "", documento: "", whatsapp: "" });
   const [categoriaForm, setCategoriaForm] = useState({ descricao: "" });
   const [subcategoriaForm, setSubcategoriaForm] = useState({ descricao: "", categoria_id: "" });
+  const [variavelDraft, setVariavelDraft] = useState("");
 
   const editor = useEditor({
     extensions: [
@@ -307,6 +308,12 @@ export default function Page() {
     editor.chain().focus().insertContent(`{{${key}}}`).run();
   };
 
+  const insertDraft = () => {
+    if (!editor || !variavelDraft.trim()) return;
+    editor.chain().focus().insertContent(variavelDraft).run();
+    setVariavelDraft("");
+  };
+
   const insertImage = () => {
     if (!editor) return;
     const url = window.prompt("URL da imagem");
@@ -538,6 +545,23 @@ export default function Page() {
                   </div>
                   <div className="rounded-2xl bg-white/70 p-4">
                     <p className="text-xs uppercase tracking-widest text-gray-400">Variaveis</p>
+                    <div className="mt-3 rounded-xl bg-white/80 p-3">
+                      <p className="text-[11px] uppercase tracking-widest text-gray-400">Bloco livre</p>
+                      <textarea
+                        className="mt-2 min-h-[90px] w-full rounded-lg border border-black/10 bg-white/80 p-2 text-xs"
+                        placeholder="Escreva qualquer coisa aqui e insira no termo quando quiser."
+                        value={variavelDraft}
+                        onChange={(e) => setVariavelDraft(e.target.value)}
+                      />
+                      <button
+                        className="mt-2 rounded-full bg-white/70 px-3 py-1 text-[10px]"
+                        onClick={insertDraft}
+                        type="button"
+                        disabled={!variavelDraft.trim()}
+                      >
+                        Inserir bloco no termo
+                      </button>
+                    </div>
                     <div className="mt-2 space-y-2 text-xs">
                       {(termoVariaveisQuery.data ?? []).map((v) => (
                         <div key={v.key} className="rounded-xl bg-white/80 p-2">
