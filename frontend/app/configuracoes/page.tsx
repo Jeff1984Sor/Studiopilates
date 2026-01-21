@@ -417,6 +417,11 @@ export default function Page() {
     }
   }, [editor, termoForm.descricao]);
 
+  const insertVariable = (key: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent(`{{${key}}}`).run();
+  };
+
   const insertImage = () => {
     if (!editor) return;
     const url = window.prompt("URL da imagem");
@@ -528,7 +533,7 @@ export default function Page() {
                     Use variaveis como {"{{aluno.nome}}"} ou {"{{plano.descricao}}"}.
                   </p>
                 </div>
-                <div className="mt-4 space-y-4">
+                <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_280px]">
                   <div className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <input
@@ -660,6 +665,31 @@ export default function Page() {
                       />
                     </div>
                   )}
+                  <div className="rounded-2xl bg-white/70 p-4">
+                    <p className="text-xs uppercase tracking-widest text-gray-400">Variaveis</p>
+                    <div className="mt-2 space-y-2 text-xs">
+                      {(termoVariaveisQuery.data ?? []).map((v) => (
+                        <div key={v.key} className="rounded-xl bg-white/80 p-2">
+                          <p className="font-medium">{v.label}</p>
+                          <p className="text-gray-500">
+                            {"{{"}
+                            {v.key}
+                            {"}}"} • ex: {v.example}
+                          </p>
+                          <button
+                            className="mt-2 rounded-full bg-white/70 px-3 py-1 text-[10px]"
+                            onClick={() => insertVariable(v.key)}
+                            type="button"
+                          >
+                            Inserir variavel
+                          </button>
+                        </div>
+                      ))}
+                      {(termoVariaveisQuery.data ?? []).length === 0 && (
+                        <p className="text-gray-500">Nenhuma variavel encontrada.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="mt-6 space-y-2 text-sm">
                   {(termosQuery.data ?? []).map((t) => (
