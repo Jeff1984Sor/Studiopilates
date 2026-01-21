@@ -17,6 +17,7 @@ frontend/node_modules/
 .next/
 dist/
 build/
+storage/
 
 # Misc
 .DS_Store

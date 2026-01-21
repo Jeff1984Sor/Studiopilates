@@ -13,3 +13,9 @@ class TermoUsoOut(ORMModel):
     descricao: str
     versao: str
     ativo: bool
+
+
+class TermoVariavelOut(BaseModel):
+    key: str
+    label: str
+    example: str

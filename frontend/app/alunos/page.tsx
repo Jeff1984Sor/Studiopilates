@@ -29,6 +29,13 @@ type Aluno = {
 
 type Unidade = { id: number; nome: string };
 type Termo = { id: number; versao: string; ativo: boolean };
+type AlunoAnexo = {
+  id: number;
+  tipo: string;
+  arquivo_nome: string;
+  mime_type: string;
+  criado_em: string;
+};
 
 type PageResponse<T> = {
   items: T[];
@@ -43,6 +50,7 @@ export default function Page() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showAlunoModal, setShowAlunoModal] = useState(false);
   const [showEnderecoModal, setShowEnderecoModal] = useState(false);
+  const [showFichaModal, setShowFichaModal] = useState(false);
   const [selectedAlunoId, setSelectedAlunoId] = useState<number | null>(null);
   const [form, setForm] = useState({
     nome: "",
@@ -107,6 +115,15 @@ export default function Page() {
     }
   });
 
+  const anexosQuery = useQuery({
+    queryKey: ["aluno-anexos", selectedAlunoId],
+    enabled: selectedAlunoId !== null && showFichaModal,
+    queryFn: async () => {
+      const resp = await api.get<AlunoAnexo[]>(`/alunos/${selectedAlunoId}/anexos`);
+      return resp.data;
+    }
+  });
+
   const createAlunoMutation = useMutation({
     mutationFn: async () => {
       return api.post("/alunos", {
@@ -155,6 +172,18 @@ export default function Page() {
     }
   });
 
+  const gerarTermoMutation = useMutation({
+    mutationFn: async () => {
+      return api.post(`/alunos/${selectedAlunoId}/termo-pdf`, {
+        termo_id: alunoDetailQuery.data?.termo_uso_id ?? null,
+        contrato_id: null
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["aluno-anexos", selectedAlunoId] });
+    }
+  });
+
   const filtered = useMemo(() => {
     const items = alunosQuery.data?.items ?? [];
     if (!search.trim()) return items;
@@ -164,6 +193,21 @@ export default function Page() {
 
   const total = alunosQuery.data?.meta.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const downloadAnexo = async (anexo: AlunoAnexo) => {
+    if (!selectedAlunoId) return;
+    const resp = await api.get(`/alunos/${selectedAlunoId}/anexos/${anexo.id}`, {
+      responseType: "blob"
+    });
+    const url = window.URL.createObjectURL(resp.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = anexo.arquivo_nome;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
 
   return (
     <AppShell>
@@ -273,6 +317,15 @@ export default function Page() {
                     }}
                   >
                     Enderecos
+                  </button>
+                  <button
+                    className="rounded-full bg-white/70 px-3 py-1 text-xs"
+                    onClick={() => {
+                      setSelectedAlunoId(aluno.id);
+                      setShowFichaModal(true);
+                    }}
+                  >
+                    Ficha
                   </button>
                 </div>
               </div>
@@ -491,6 +544,80 @@ export default function Page() {
                   ))}
                   {(alunoDetailQuery.data?.enderecos ?? []).length === 0 && (
                     <p className="text-gray-500">Nenhum endereco cadastrado.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFichaModal && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6">
+          <div className="w-full max-w-4xl rounded-3xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-display">Ficha do aluno</h2>
+              <button className="text-sm text-gray-500" onClick={() => setShowFichaModal(false)}>
+                Fechar
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl bg-white/70 p-4">
+                <p className="text-sm text-gray-500">Dados gerais</p>
+                <div className="mt-3 space-y-2 text-sm">
+                  <p>
+                    <span className="text-gray-500">Nome:</span>{" "}
+                    {alunoDetailQuery.data?.nome ?? "—"}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">CPF:</span> {alunoDetailQuery.data?.cpf ?? "—"}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Status:</span>{" "}
+                    {alunoDetailQuery.data?.status ?? "—"}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Unidade:</span>{" "}
+                    {unidadesQuery.data?.find((u) => u.id === alunoDetailQuery.data?.unidade_id)
+                      ?.nome ?? "—"}
+                  </p>
+                  <p>
+                    <span className="text-gray-500">Termo vinculado:</span>{" "}
+                    {alunoDetailQuery.data?.termo_uso_id ? `#${alunoDetailQuery.data.termo_uso_id}` : "Nenhum"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white/70 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500">Anexos</p>
+                  <button
+                    className="rounded-full bg-black px-3 py-1 text-xs text-white"
+                    onClick={() => gerarTermoMutation.mutate()}
+                    disabled={!alunoDetailQuery.data?.termo_uso_id || gerarTermoMutation.isPending}
+                  >
+                    {gerarTermoMutation.isPending ? "Gerando..." : "Gerar termo de uso"}
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2 text-sm">
+                  {(anexosQuery.data ?? []).map((anexo) => (
+                    <div key={anexo.id} className="flex items-center justify-between rounded-xl bg-white/80 p-3">
+                      <div>
+                        <p className="font-medium">{anexo.tipo}</p>
+                        <p className="text-xs text-gray-500">{anexo.arquivo_nome}</p>
+                      </div>
+                      <button
+                        className="rounded-full bg-white/70 px-3 py-1 text-xs"
+                        onClick={() => downloadAnexo(anexo)}
+                      >
+                        Baixar PDF
+                      </button>
+                    </div>
+                  ))}
+                  {(anexosQuery.data ?? []).length === 0 && (
+                    <p className="text-gray-500">Nenhum anexo ainda.</p>
                   )}
                 </div>
               </div>

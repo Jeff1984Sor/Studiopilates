@@ -12,6 +12,7 @@ type PageResponse<T> = {
 
 type Unidade = { id: number; nome: string; ocupacao_max: number; ativo: boolean };
 type Termo = { id: number; versao: string; descricao: string; ativo: boolean };
+type TermoVariavel = { key: string; label: string; example: string };
 type Perfil = { id: number; descricao: string };
 type Recorrencia = { id: number; descricao: string; intervalo_meses: number };
 type TipoPlano = { id: number; descricao: string; recorrencia_id: number };
@@ -74,6 +75,14 @@ export default function Page() {
         params: { page: 1, page_size: 100, order_by: "versao", order_dir: "desc" }
       });
       return resp.data.items;
+    }
+  });
+
+  const termoVariaveisQuery = useQuery({
+    queryKey: ["termo-variaveis"],
+    queryFn: async () => {
+      const resp = await api.get<TermoVariavel[]>("/termos/variaveis");
+      return resp.data;
     }
   });
 
@@ -347,39 +356,63 @@ export default function Page() {
 
             {active === "termos" && (
               <div className="rounded-2xl bg-white/70 p-6">
-                <h2 className="text-2xl font-display">Termos de uso</h2>
-                <div className="mt-4 grid gap-3">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <input
-                      className="rounded-xl border border-black/10 p-3"
-                      placeholder="Versao"
-                      value={termoForm.versao}
-                      onChange={(e) => setTermoForm((f) => ({ ...f, versao: e.target.value }))}
-                    />
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={termoForm.ativo}
-                        onChange={(e) => setTermoForm((f) => ({ ...f, ativo: e.target.checked }))}
-                      />
-                      Ativo
-                    </label>
-                  </div>
-                  <textarea
-                    className="rounded-xl border border-black/10 p-3"
-                    rows={4}
-                    placeholder="Descricao do termo"
-                    value={termoForm.descricao}
-                    onChange={(e) => setTermoForm((f) => ({ ...f, descricao: e.target.value }))}
-                  />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-2xl font-display">Termo de uso</h2>
+                  <p className="text-xs text-gray-500">
+                    Use variaveis como {"{{aluno.nome}}"} ou {"{{plano.descricao}}"}.
+                  </p>
                 </div>
-                <button
-                  className="mt-3 rounded-full bg-black px-4 py-2 text-white"
-                  onClick={() => createTermo.mutate()}
-                  disabled={!termoForm.versao || !termoForm.descricao || createTermo.isPending}
-                >
-                  {createTermo.isPending ? "Salvando..." : "Adicionar termo"}
-                </button>
+                <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_280px]">
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input
+                        className="rounded-xl border border-black/10 p-3"
+                        placeholder="Versao"
+                        value={termoForm.versao}
+                        onChange={(e) => setTermoForm((f) => ({ ...f, versao: e.target.value }))}
+                      />
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={termoForm.ativo}
+                          onChange={(e) => setTermoForm((f) => ({ ...f, ativo: e.target.checked }))}
+                        />
+                        Ativo
+                      </label>
+                    </div>
+                    <textarea
+                      className="min-h-[220px] rounded-2xl border border-black/10 p-3"
+                      placeholder="Escreva o modelo do termo (Markdown ou texto)."
+                      value={termoForm.descricao}
+                      onChange={(e) => setTermoForm((f) => ({ ...f, descricao: e.target.value }))}
+                    />
+                    <button
+                      className="rounded-full bg-black px-4 py-2 text-white"
+                      onClick={() => createTermo.mutate()}
+                      disabled={!termoForm.versao || !termoForm.descricao || createTermo.isPending}
+                    >
+                      {createTermo.isPending ? "Salvando..." : "Adicionar termo"}
+                    </button>
+                  </div>
+                  <div className="rounded-2xl bg-white/70 p-4">
+                    <p className="text-xs uppercase tracking-widest text-gray-400">Variaveis</p>
+                    <div className="mt-2 space-y-2 text-xs">
+                      {(termoVariaveisQuery.data ?? []).map((v) => (
+                        <div key={v.key} className="rounded-xl bg-white/80 p-2">
+                          <p className="font-medium">{v.label}</p>
+                          <p className="text-gray-500">
+                            {"{{"}
+                            {v.key}
+                            {"}}"} • ex: {v.example}
+                          </p>
+                        </div>
+                      ))}
+                      {(termoVariaveisQuery.data ?? []).length === 0 && (
+                        <p className="text-gray-500">Nenhuma variavel encontrada.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <div className="mt-6 space-y-2 text-sm">
                   {(termosQuery.data ?? []).map((t) => (
                     <div key={t.id} className="rounded-xl bg-white/80 p-3">

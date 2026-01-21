@@ -42,3 +42,17 @@ class EnderecoAluno(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     aluno = relationship("Aluno", back_populates="enderecos")
+
+
+class AlunoAnexo(Base):
+    __tablename__ = "aluno_anexo"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    aluno_id: Mapped[int] = mapped_column(ForeignKey("aluno.id"))
+    termo_uso_id: Mapped[int | None] = mapped_column(ForeignKey("termo_uso.id"), nullable=True)
+    contrato_id: Mapped[int | None] = mapped_column(ForeignKey("contrato.id"), nullable=True)
+    tipo: Mapped[str] = mapped_column(String(50))
+    arquivo_nome: Mapped[str] = mapped_column(String(255))
+    arquivo_path: Mapped[str] = mapped_column(String(500))
+    mime_type: Mapped[str] = mapped_column(String(100))
+    criado_em: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
