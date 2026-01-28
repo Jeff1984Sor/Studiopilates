@@ -72,6 +72,12 @@ class BaseAutoCdForm(forms.ModelForm):
             "tipo": "Tipo",
             "data": "Data",
             "descricao": "Descricao",
+            "host": "Servidor SMTP",
+            "porta": "Porta",
+            "usuario": "Usuario",
+            "senha": "Senha",
+            "use_tls": "Usar TLS",
+            "remetente": "Email Remetente",
         }
         for name, field in self.fields.items():
             is_fk = isinstance(field, forms.ModelChoiceField)
@@ -81,6 +87,9 @@ class BaseAutoCdForm(forms.ModelForm):
             if name in label_map:
                 field.label = label_map[name]
             if isinstance(field.widget, forms.HiddenInput):
+                continue
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.setdefault("class", "form-check-input")
                 continue
             if is_fk:
                 field.widget.attrs.setdefault("class", "form-select")
@@ -99,6 +108,8 @@ class BaseAutoCdForm(forms.ModelForm):
                 field.widget = forms.DateInput(attrs={"type": "date", "class": "form-control"})
             if name == "data":
                 field.widget = forms.DateInput(attrs={"type": "date", "class": "form-control"})
+            if name == "senha":
+                field.widget = forms.PasswordInput(render_value=True, attrs={"class": "form-control"})
             if name in ("horaInicio", "horaFim"):
                 field.widget = forms.TimeInput(attrs={"type": "time", "class": "form-control"})
             if name == "diaSemana":
@@ -228,6 +239,12 @@ class ModeloContratoForm(BaseAutoCdForm):
     class Meta:
         model = models.ModeloContrato
         fields = ["cdModeloContrato", "dsNome", "conteudo_html", "ativo"]
+
+
+class EmailConfiguracaoForm(BaseAutoCdForm):
+    class Meta:
+        model = models.EmailConfiguracao
+        fields = ["cdEmail", "host", "porta", "usuario", "senha", "use_tls", "remetente", "ativo"]
 
 
 class ModeloEvolucaoForm(BaseAutoCdForm):

@@ -139,6 +139,12 @@ class Plano(models.Model):
 
 
 class Contrato(models.Model):
+    STATUS_CHOICES = [
+        ("NAO_ASSINADO", "Nao assinado"),
+        ("ASSINADO", "Contrato assinado"),
+        ("ASSINADO_DIGITALMENTE", "Assinado digitalmente"),
+    ]
+
     cdContrato = models.IntegerField(unique=True, db_index=True)
     cdAluno = models.ForeignKey(Aluno, on_delete=models.PROTECT)
     cdPlano = models.ForeignKey(Plano, on_delete=models.PROTECT)
@@ -149,6 +155,12 @@ class Contrato(models.Model):
     dtCadastro = models.DateTimeField(auto_now_add=True)
     dtInicioContrato = models.DateField()
     dtFimContrato = models.DateField()
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default="NAO_ASSINADO")
+    assinado_em = models.DateTimeField(null=True, blank=True)
+    assinatura_nome = models.CharField(max_length=150, blank=True)
+    assinatura_documento = models.CharField(max_length=30, blank=True)
+    assinatura_ip = models.GenericIPAddressField(null=True, blank=True)
+    assinatura_imagem = models.ImageField(upload_to="assinaturas", null=True, blank=True)
 
     def __str__(self):
         return f"Contrato {self.cdContrato}"
@@ -342,3 +354,18 @@ class ModeloContrato(models.Model):
 
     def __str__(self):
         return self.dsNome
+
+
+class EmailConfiguracao(models.Model):
+    cdEmail = models.IntegerField(unique=True, db_index=True)
+    host = models.CharField(max_length=120)
+    porta = models.IntegerField(default=587)
+    usuario = models.CharField(max_length=150)
+    senha = models.CharField(max_length=150)
+    use_tls = models.BooleanField(default=True)
+    remetente = models.EmailField()
+    ativo = models.BooleanField(default=True)
+    dtCadastro = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.remetente

@@ -25,6 +25,8 @@ def _active_menu(path: str) -> str:
         return "agenda"
     if path.startswith("/financeiro"):
         return "financeiro"
+    if path.startswith("/configuracoes"):
+        return "configuracoes"
     if path.startswith("/contratos") or path.startswith("/wizard"):
         return "cadastros"
     if path.startswith("/cadastros"):
@@ -1239,7 +1241,11 @@ def create_view(request, model, form_class, redirect_name):
                 }
                 valor = float(valor_parcela or 0)
                 obj = services.criar_contrato_e_contas(contrato_data, valor)
-                messages.success(request, "Contrato criado. Agende as aulas.")
+                if services.enviar_contrato_para_assinatura(obj, request.build_absolute_uri("/")):
+                    messages.success(request, "Contrato criado e enviado por email. Agende as aulas.")
+                else:
+                    messages.warning(request, "Contrato criado, mas aluno sem email para assinatura.")
+                    messages.success(request, "Contrato criado. Agende as aulas.")
                 return redirect("contratos_agenda", pk=obj.id)
             obj = form.save()
             if model is models.ContasPagar:
@@ -1313,6 +1319,9 @@ def edit_view(request, model, form_class, redirect_name, pk):
             if model is models.Aluno:
                 _sync_aluno_address(obj, request.POST)
                 _sync_aluno_phones(obj, request.POST)
+            if model is models.Contrato and obj.status == "NAO_ASSINADO":
+                if not services.enviar_contrato_para_assinatura(obj, request.build_absolute_uri("/")):
+                    messages.warning(request, "Contrato atualizado, mas aluno sem email para assinatura.")
             messages.success(request, "Atualizado com sucesso")
             return redirect(next_url or redirect_name)
         messages.error(request, "Verifique os erros")
@@ -1804,7 +1813,11 @@ def wizard_step5(request):
             "dtFimContrato": data.get("dtFimContrato"),
         }
         contrato = services.criar_contrato_e_contas(contrato_data, float(data.get("valor", "0")))
-        messages.success(request, "Contrato criado. Agende as aulas.")
+        if services.enviar_contrato_para_assinatura(contrato, request.build_absolute_uri("/")):
+            messages.success(request, "Contrato criado e enviado por email. Agende as aulas.")
+        else:
+            messages.warning(request, "Contrato criado, mas aluno sem email para assinatura.")
+            messages.success(request, "Contrato criado. Agende as aulas.")
         return redirect("contratos_agenda", pk=contrato.id)
     return render(
         request,
@@ -2023,3 +2036,109 @@ def contrato_agenda(request, pk):
         "active_menu": "cadastros",
     }
     return render(request, "contratos/agenda.html", context)
+
+
+@login_required
+def email_config_view(request):
+    cfg = models.EmailConfiguracao.objects.order_by("-dtCadastro").first()
+    if request.method == "POST":
+        data = request.POST.copy()
+        data = _inject_cd_value(models.EmailConfiguracao, data)
+        form = forms.EmailConfiguracaoForm(data, instance=cfg)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Configuracao de email salva.")
+            return redirect("email_config")
+        messages.error(request, "Verifique os erros do formulario.")
+    else:
+        form = forms.EmailConfiguracaoForm(instance=cfg)
+    return render(
+        request,
+        "configuracoes/email.html",
+        {
+            "form": form,
+            "title": "Configuracao de Email",
+            "breadcrumbs": [("Home", reverse("dashboard")), ("Configuracoes", "#"), ("Email", "#")],
+            "active_menu": "configuracoes",
+        },
+    )
+
+
+def contrato_assinar(request, token):
+    try:
+        contrato_id = services.validar_token_contrato(token)
+    except Exception:
+        return render(request, "contratos/assinatura.html", {"token_invalido": True})
+    contrato = get_object_or_404(models.Contrato, pk=contrato_id)
+    if request.method == "POST":
+        if contrato.status in ("ASSINADO", "ASSINADO_DIGITALMENTE"):
+            return render(
+                request,
+                "contratos/assinatura_sucesso.html",
+                {"contrato": contrato, "ja_assinado": True},
+            )
+        assinatura_nome = request.POST.get("assinatura_nome", "").strip()
+        assinatura_documento = request.POST.get("assinatura_documento", "").strip()
+        assinatura_data = request.POST.get("assinatura_data", "").strip()
+        assinatura_ip = request.META.get("REMOTE_ADDR")
+        if assinatura_nome and assinatura_data.startswith("data:image/"):
+            try:
+                from django.core.files.base import ContentFile
+                import base64
+
+                header, data = assinatura_data.split(",", 1)
+                content = ContentFile(base64.b64decode(data), name=f"contrato_{contrato.id}.png")
+                contrato.assinatura_imagem = content
+            except Exception:
+                assinatura_data = ""
+        contrato.assinatura_nome = assinatura_nome
+        contrato.assinatura_documento = assinatura_documento
+        contrato.assinatura_ip = assinatura_ip
+        contrato.status = "ASSINADO_DIGITALMENTE"
+        contrato.assinado_em = timezone.now()
+        contrato.save()
+        return render(request, "contratos/assinatura_sucesso.html", {"contrato": contrato})
+    html = services.render_contrato_html(contrato)
+    return render(
+        request,
+        "contratos/assinatura.html",
+        {"contrato": contrato, "contrato_html": html, "token": token},
+    )
+
+
+@login_required
+def contrato_enviar_email(request, pk):
+    contrato = get_object_or_404(models.Contrato, pk=pk)
+    if request.method != "POST":
+        return redirect("alunos_detail", pk=contrato.cdAluno_id)
+    if not contrato.cdAluno.dsEmail:
+        messages.warning(request, "Aluno sem email cadastrado.")
+        return redirect("alunos_detail", pk=contrato.cdAluno_id)
+    if services.enviar_contrato_para_assinatura(contrato, request.build_absolute_uri("/")):
+        messages.success(request, "Contrato enviado para assinatura por email.")
+    else:
+        messages.warning(request, "Nao foi possivel enviar o email do contrato.")
+    return redirect("alunos_detail", pk=contrato.cdAluno_id)
+
+
+@login_required
+def contrato_assinar_local(request, pk):
+    contrato = get_object_or_404(models.Contrato, pk=pk)
+    token = services.gerar_token_contrato(contrato)
+    return redirect("contrato_assinar", token=token)
+
+
+@login_required
+def contrato_assinatura_detalhe(request, pk):
+    contrato = get_object_or_404(models.Contrato, pk=pk)
+    contrato_html = services.render_contrato_html(contrato)
+    return render(
+        request,
+        "contratos/assinatura_detalhe.html",
+        {
+            "contrato": contrato,
+            "contrato_html": contrato_html,
+            "breadcrumbs": [("Home", reverse("dashboard")), ("Alunos", reverse("alunos_list")), ("Assinatura", "#")],
+            "active_menu": "cadastros",
+        },
+    )

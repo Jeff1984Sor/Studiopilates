@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+      <div>
+        <div class="text-muted small">Contrato</div>
+        <h3 class="mb-1">Assinatura digital</h3>
+        <div class="text-muted">Aluno: {{ contrato.cdAluno.dsNome }}</div>
+      </div>
+      <div>
+        <span class="badge bg-success">{{ contrato.get_status_display }}</span>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <div class="border rounded p-3 bg-light h-100">
+          <div class="fw-semibold mb-2">Dados da assinatura</div>
+          <div class="mb-1"><strong>Nome:</strong> {{ contrato.assinatura_nome|default:"-" }}</div>
+          <div class="mb-1"><strong>Documento:</strong> {{ contrato.assinatura_documento|default:"-" }}</div>
+          <div class="mb-1"><strong>IP:</strong> {{ contrato.assinatura_ip|default:"-" }}</div>
+          <div class="mb-1"><strong>Assinado em:</strong> {{ contrato.assinado_em|date:"d/m/Y H:i"|default:"-" }}</div>
+          {% if contrato.assinatura_imagem %}
+            <div class="mt-3">
+              <div class="fw-semibold mb-2">Assinatura</div>
+              <img src="{{ contrato.assinatura_imagem.url }}" alt="Assinatura" class="img-fluid rounded border" />
+            </div>
+          {% else %}
+            <div class="text-muted mt-3">Assinatura nao registrada.</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-7">
+        <div class="border rounded p-3 bg-white">
+          <div class="fw-semibold mb-2">Contrato completo</div>
+          {{ contrato_html|safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h3 class="mb-2">Configuracao de Email</h3>
+    <p class="text-muted mb-4">Configure o SMTP usado para enviar contratos e notificacoes.</p>
+    <form method="post" class="email-config-form">
+      {% csrf_token %}
+      {{ form.cdEmail }}
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
+          {{ form.host }}
+          {% if form.host.errors %}<div class="invalid-feedback d-block">{{ form.host.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.porta.id_for_label }}">{{ form.porta.label }}</label>
+          {{ form.porta }}
+          {% if form.porta.errors %}<div class="invalid-feedback d-block">{{ form.porta.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="{{ form.usuario.id_for_label }}">{{ form.usuario.label }}</label>
+          {{ form.usuario }}
+          {% if form.usuario.errors %}<div class="invalid-feedback d-block">{{ form.usuario.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="{{ form.senha.id_for_label }}">{{ form.senha.label }}</label>
+          {{ form.senha }}
+          {% if form.senha.errors %}<div class="invalid-feedback d-block">{{ form.senha.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" for="{{ form.remetente.id_for_label }}">{{ form.remetente.label }}</label>
+          {{ form.remetente }}
+          {% if form.remetente.errors %}<div class="invalid-feedback d-block">{{ form.remetente.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="d-flex flex-wrap gap-4 mt-3">
+        <div class="form-check form-switch">
+          {{ form.use_tls }}
+          <label class="form-check-label" for="{{ form.use_tls.id_for_label }}">{{ form.use_tls.label }}</label>
+          {% if form.use_tls.errors %}<div class="invalid-feedback d-block">{{ form.use_tls.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="form-check form-switch">
+          {{ form.ativo }}
+          <label class="form-check-label" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
+          {% if form.ativo.errors %}<div class="invalid-feedback d-block">{{ form.ativo.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+      <button class="btn btn-primary mt-3" type="submit">Salvar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

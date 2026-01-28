@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <title>Assinatura do contrato</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f6f7fb; font-family: 'Manrope', 'Segoe UI', Tahoma, sans-serif; color:#0f1c1c;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7fb; padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 10px 30px rgba(16, 42, 42, 0.08);">
+            <tr>
+              <td style="padding:24px 28px; background:linear-gradient(120deg, #0f1c1c 0%, #1f3f3f 45%, #2d7a7a 100%); color:#ffffff;">
+                <div style="font-size:12px; letter-spacing:2px; text-transform:uppercase; opacity:0.8;">Studio Pilates</div>
+                <h1 style="margin:8px 0 0; font-size:22px;">Seu contrato está pronto para assinatura</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 28px;">
+                <p style="margin:0 0 12px;">Ola, {{ aluno.dsNome }}.</p>
+                <p style="margin:0 0 16px; color:#425656;">Segue o contrato para assinatura digital. Clique no botao abaixo para assinar com seguranca.</p>
+                <div style="text-align:center; margin:20px 0 24px;">
+                  <a href="{{ link_assinatura }}" style="display:inline-block; padding:12px 20px; background:#2d7a7a; color:#ffffff; text-decoration:none; border-radius:999px; font-weight:600;">Assinar contrato</a>
+                </div>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; margin-bottom:16px;">
+                  <tr>
+                    <td style="padding:10px 12px; background:#f4f8f8; border-radius:12px; border:1px solid #e6ecf2;">
+                      <div style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#5a6b6b; margin-bottom:6px;">Resumo do contrato</div>
+                      <div style="font-size:14px; color:#1d2f2f;">
+                        <strong>Contrato:</strong> {{ contrato.cdContrato }}<br />
+                        <strong>Plano:</strong> {{ plano }}<br />
+                        <strong>Unidade:</strong> {{ unidade }}<br />
+                        <strong>Periodo:</strong> {{ contrato.dtInicioContrato|date:"d/m/Y" }} a {{ contrato.dtFimContrato|date:"d/m/Y" }}<br />
+                        <strong>Valor:</strong> R$ {{ contrato.valor_parcela }}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+                <div style="border:1px solid #e6ecf2; border-radius:12px; padding:16px; background:#fafbfc;">
+                  <div style="font-weight:600; margin-bottom:8px;">Contrato completo</div>
+                  <div style="font-size:14px; color:#2f3f3f; line-height:1.5;">
+                    {{ contrato_html|safe }}
+                  </div>
+                </div>
+                <p style="margin:20px 0 0; font-size:12px; color:#7c8a8a;">
+                  Se voce nao reconhecer este pedido, apenas ignore este email.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
